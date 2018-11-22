@@ -174,6 +174,8 @@ Usage: sam local invoke [OPTIONS] [FUNCTION_IDENTIFIER]
 
 
 #+BEGIN_SRC shell-script
+docker run -p 8000:8000  --name dynamodb --network sam-network --rm amazon/dynamodb-local
 aws dynamodb list-tables --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
 aws dynamodb scan --table-name orders_table --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
+sam local start-api -d 5858 --env-vars src/test/resources/test_environment_linux.json --docker-network sam-network
 #+END_SRC
