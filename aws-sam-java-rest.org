@@ -1,0 +1,179 @@
+#+TITLE:     AWS SAM Java Rest Fork
+#+AUTHOR:    Jeff Romine
+#+EMAIL:     jromineut@gmail.com
+#+DATE:      <2018-11-22 Thu>
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+OPTIONS: ^:{} author:nil email:nil creator:nil timestamp:nil
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+#+STARTUP: showeverything
+
+* General
+
+** Accounts
+
+
+[[https://jromine846.signin.aws.amazon.com/console]]
+
+[[https://jeffromine.signin.aws.amazon.com/console]]
+
+** Links
+
+*** Source
+[[https://github.com/aws-samples/aws-sam-java-rest]]
+
+** Notes
+
+
+*** AWS Sample
+
+[[https://github.com/aws-samples/aws-sam-java-rest]]
+
+
+**** Docker Installation
+
+https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce-1
+
+
+#+BEGIN_SRC shell-script
+sudo apt-get update
+sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+sudo apt-get update
+sudo apt-get install docker-ce
+sudo docker run hello-world
+#+END_SRC
+
+
+**** DynamoDB Local
+
+[[https://hub.docker.com/r/amazon/dynamodb-local/]]
+
+#+BEGIN_SRC shell-script
+
+#+END_SRC
+
+[[https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user]]
+
+***** Validate DynamoDB Local
+[[https://github.com/cnadiminti/docker-dynamodb-local#verify-the-dynamodb-local-instance-with-aws-cli]]
+
+
+#+BEGIN_SRC shell-script
+aws dynamodb create-table --table-name myTable --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 --endpoint-url http://0.0.0.0:8000 --region us-east-1
+aws dynamodb list-tables --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
+#+END_SRC
+
+***** Debug
+
+[[https://github.com/awslabs/aws-sam-cli/blob/develop/docs/usage.rst#debugging-applications]]
+
+#+BEGIN_SRC shell-script
+sam local invoke -d 5858 <function logical id>
+#+END_SRC
+
+****** Create a network for DynamoDB and sam local
+
+[[https://medium.com/@jaaq/making-docker-containers-talk-to-each-other-by-hostname-using-container-networking-94835a6f6a5b]]
+
+[[https://github.com/heitorlessa/sam-local-python-hot-reloading]]
+
+
+#+BEGIN_SRC shell-script
+docker network create sam-network
+docker network list
+docker network inspect sam-network
+docker run -p 8000:8000  --name dynamodb --network sam-network --rm amazon/dynamodb-local
+sam local start-api --env-vars src/test/resources/test_environment_linux.json --docker-network sam-network
+#+END_SRC
+
+****** Fix the environment.json so that it refers to the correct DynamoDB host name
+
+'dynamodb' replaces 127.0.0.1.
+
+#+BEGIN_SRC json
+{
+  "GetOrderFunction": {
+    "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+    "TABLE_NAME": "orders_table"
+  },
+  "GetOrdersFunction": {
+    "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+    "TABLE_NAME": "orders_table"
+  },
+  "UpdateOrderFunction": {
+    "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+    "TABLE_NAME": "orders_table"
+  },
+  "DeleteOrderFunction": {
+    "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+    "TABLE_NAME": "orders_table"
+  },
+  "CreateOrderFunction": {
+    "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+    "TABLE_NAME": "orders_table"
+  },
+  "CreateOrdersTableFunction": {
+    "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+    "TABLE_NAME": "orders_table"
+  }
+}
+#+END_SRC
+
+#+BEGIN_SRC shell-script
+sam local start-api -d 5858 --env-vars src/test/resources/test_environment_linux.json --docker-network sam-network
+#+END_SRC
+
+****** Invoking a single function
+
+#+BEGIN_SRC shell-script
+sam local invoke --help
+#+END_SRC
+
+#+BEGIN_EXAMPLE
+Usage: sam local invoke [OPTIONS] [FUNCTION_IDENTIFIER]
+  You can use this command to execute your function in a Lambda-like
+  environment locally. You can pass in the event body via stdin or by using
+  the -e (--event) parameter. Logs from the Lambda function will be output
+  via stdout.
+  Invoking a Lambda function using an event file
+  $ sam local invoke "HelloWorldFunction" -e event.json
+  Invoking a Lambda function using input from stdin
+  $ echo '{"message": "Hey, are you there?" }' | sam local invoke "HelloWorldFunction"
+#+END_EXAMPLE
+
+ #+BEGIN_SRC shell-script
+   sam local invoke GetOrdersFunction -e aws-proxy.json \
+       --env-vars src/test/resources/test_environment_linux.json \
+       --docker-network sam-network
+ #+END_SRC
+
+***** Sample Events Published by Event Sources
+
+[[https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-api-gateway-request]]
+
+[[https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-create-api-as-simple-proxy-for-lambda.html]]
+
+[[https://github.com/awslabs/aws-sam-cli/blob/develop/docs/usage.rst#debugging-applications]]
+
+
+#+BEGIN_SRC shell-script
+aws dynamodb list-tables --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
+aws dynamodb scan --table-name orders_table --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
+#+END_SRC
