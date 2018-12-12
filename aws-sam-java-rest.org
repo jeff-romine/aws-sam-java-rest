@@ -28,15 +28,18 @@
 ** Links
 
 *** Source
+
 [[https://github.com/aws-samples/aws-sam-java-rest]]
 
-** Notes
+*** AWS Serverless Application Repository
 
+[[https://aws.amazon.com/serverless/serverlessrepo/][AWS Serverless Application Repository]]
+
+** Notes
 
 *** AWS Sample
 
 [[https://github.com/aws-samples/aws-sam-java-rest]]
-
 
 **** Docker Installation
 
@@ -158,11 +161,11 @@ Usage: sam local invoke [OPTIONS] [FUNCTION_IDENTIFIER]
   $ echo '{"message": "Hey, are you there?" }' | sam local invoke "HelloWorldFunction"
 #+END_EXAMPLE
 
- #+BEGIN_SRC shell-script
-   sam local invoke GetOrdersFunction -e aws-proxy.json \
-       --env-vars src/test/resources/test_environment_linux.json \
-       --docker-network sam-network
- #+END_SRC
+#+BEGIN_SRC shell-script
+  sam local invoke GetOrdersFunction -e aws-proxy.json \
+      --env-vars src/test/resources/test_environment_linux.json \
+      --docker-network sam-network
+#+END_SRC
 
 ***** Sample Events Published by Event Sources
 
@@ -172,10 +175,19 @@ Usage: sam local invoke [OPTIONS] [FUNCTION_IDENTIFIER]
 
 [[https://github.com/awslabs/aws-sam-cli/blob/develop/docs/usage.rst#debugging-applications]]
 
-
 #+BEGIN_SRC shell-script
 docker run -p 8000:8000  --name dynamodb --network sam-network --rm amazon/dynamodb-local
 aws dynamodb list-tables --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
 aws dynamodb scan --table-name orders_table --endpoint-url http://0.0.0.0:8000 --output json --region us-east-1
 sam local start-api -d 5858 --env-vars src/test/resources/test_environment_linux.json --docker-network sam-network
+#+END_SRC
+
+
+
+** Invoke
+
+#+BEGIN_SRC shell-script
+export TABLE_NAME="order_table"
+export ENDPOINT_OVERRIDE="http://dynamodb:8000"
+sam local invoke GetOrdersFunction --docker-network sam-network -d 5858 --event api-gateway-proxy-request-event.json
 #+END_SRC
